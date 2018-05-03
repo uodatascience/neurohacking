@@ -1,0 +1,128 @@
+---
+title: "Neurohacking"
+author: "Dani Cosme"
+date: "5/1/2018"
+output:
+  html_document:
+    highlight: tango
+    theme: united
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+# Resources for doing neuroimaging analyses in R
+[Neurohacking Coursera course - John Muschelli](https://www.coursera.org/learn/neurohacking#syllabus)  
+[Imaging in R - John Muschelli](http://johnmuschelli.com/imaging_in_r/index.html)  
+[Neurovault for R - John Muschelli](https://github.com/muschellij2/neurovault)  
+[neurosim package - Marijke Welvaert](https://www.rdocumentation.org/packages/neuRosim/versions/0.2-12/topics/neuRosim-package)  
+
+# install and load packages
+```{r}
+if(!require(tidyverse)){
+  install.packages('tidyverse')
+}
+if(!require(neurobase)){
+  install.packages('neurobase')
+}
+if(!require(remotes)){
+  install.packages('remotes')
+}
+if(!require(devtools)){
+  install.packages('devtools')
+}
+if(!require(neurovault)){
+  remotes::install_github("muschellij2/neurovault")
+}
+if(!require(papayaWidget)){
+  devtools::install_github("muschellij2/papayaWidget")
+}
+```
+
+# load structural and stat maps
+```{r}
+structural = readnii('data/MNI152_T1_1mm_brain.nii')
+functional = readnii('data/functionals.nii.gz')
+stat.map = readnii('data/regulate_look.nii')
+```
+
+# explore data structure
+```{r}
+# class
+class(structural)
+
+# print information
+print(structural)
+print(functional)
+```
+
+# plot histograms and density function
+```{r}
+# histogram
+hist(structural)
+
+# density
+plot(density(structural))
+
+# only voxel values > 0
+plot(density(structural, mask = structural > 0 ))
+
+# convert to a dataframe and plot using ggplot
+data.frame(structural = c(structural)) %>%
+  ggplot(aes(structural)) +
+  geom_density(fill = "pink") +
+  theme_minimal()
+```
+
+# plot data in 2d
+```{r}
+# structural
+ortho2(structural)
+
+# structural between 2000 & 7000
+ortho2(structural, y = structural > 2000 & structural < 7000)
+
+# view specific slices
+oro.nifti::slice(structural, seq(10, 120, 10), plane = "axial")
+oro.nifti::slice(structural, seq(10, 120, 10), plane = c("sagittal"))
+
+# functionals
+ortho2(functional[,,,1])
+ortho2(functional[,,,2])
+ortho2(functional[,,,3])
+ortho2(functional[,,,4])
+ortho2(functional[,,,5])
+```
+
+# mask data
+```{r}
+mask = structural
+mask[mask < 7000 ] = 0
+papaya(list(structural, mask))
+
+# binarized
+mask[mask > 0 ] = 1
+papaya(list(structural, mask))
+```
+
+# view stap map overlaid on structural in interactive viewer
+```{r}
+papaya(list(structural, stat.map))
+```
+
+# download data from neurovault and view
+```{r, echo=FALSE}
+# download data
+CR = download_nv_collection_images(id = 2427)
+
+# view a single map overlaid on the structural
+img = readnii(CR$outfile[23])
+papaya(list(structural, img))
+```
+
+# write niftis
+```{r}
+writenii(mask, 'data/masked.nii')
+```
+
